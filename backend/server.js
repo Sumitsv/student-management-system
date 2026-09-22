@@ -2,12 +2,18 @@ const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
+const dns = require("dns");
+
 const connectDB = require("./config/db");
 const studentRoutes = require("./routes/studentRoutes");
+
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 
 // Load environment variables from the backend folder regardless of where the app starts.
 dotenv.config({ path: path.join(__dirname, ".env") });
+
+// Use public DNS servers for MongoDB Atlas SRV resolution.
+dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
 // Connect to Database
 connectDB();
@@ -25,12 +31,14 @@ app.use(
   cors({
     origin: function (origin, callback) {
       if (!origin) return callback(null, true);
+
       if (
         allowedOrigins.includes(origin) ||
         process.env.NODE_ENV !== "production"
       ) {
         return callback(null, true);
       }
+
       return callback(new Error("CORS policy rejection: Origin not allowed."));
     },
     credentials: true,
@@ -65,9 +73,11 @@ const startServer = (port) => {
   server.on("error", (error) => {
     if (error.code === "EADDRINUSE") {
       const nextPort = port + 1;
+
       console.warn(
         `Port ${port} is already in use. Retrying on port ${nextPort}...`,
       );
+
       startServer(nextPort);
       return;
     }
